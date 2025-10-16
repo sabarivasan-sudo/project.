@@ -5,7 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView
+  ScrollView,
+  Alert,
+  Platform,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/api';
@@ -13,8 +16,82 @@ import { apiService } from '../services/api';
 export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [totalProjects] = useState(2173);
+  const [totalProjects, setTotalProjects] = useState(2173);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [projects, setProjects] = useState([
+    {
+      id: 1,
+      name: 'Re Development of Railway Station Complex',
+      startDate: '01 Oct, 2025',
+      endDate: '01 Mar, 2027',
+      progress: 1,
+      status: 'In Progress',
+      detail: {
+        completion: 11,
+        earned: 86,
+        totalPriceValue: 50000,
+        totalEarnedValue: 43250,
+        actualStartDate: '05 Jun 2025',
+        actualEndDate: '--',
+        plannedStartDate: '04 Jun 2025',
+        plannedEndDate: '17 Sep 2025',
+        totalTasks: 13,
+        tasks: {
+          notStarted: { total: 12, delayed: 2 },
+          inProgress: { total: 1, delayed: 1 },
+          completed: { total: 0, delayed: 0 }
+        }
+      }
+    },
+    {
+      id: 2,
+      name: 'Commercial Building Construction',
+      startDate: '15 Nov, 2025',
+      endDate: '30 Jun, 2026',
+      progress: 25,
+      status: 'In Progress',
+      detail: {
+        completion: 25,
+        earned: 45,
+        totalPriceValue: 75000,
+        totalEarnedValue: 33750,
+        actualStartDate: '15 Nov 2025',
+        actualEndDate: '--',
+        plannedStartDate: '15 Nov 2025',
+        plannedEndDate: '30 Jun 2026',
+        totalTasks: 8,
+        tasks: {
+          notStarted: { total: 5, delayed: 1 },
+          inProgress: { total: 2, delayed: 0 },
+          completed: { total: 1, delayed: 0 }
+        }
+      }
+    },
+    {
+      id: 3,
+      name: 'Residential Apartment Complex',
+      startDate: '01 Jan, 2026',
+      endDate: '31 Dec, 2026',
+      progress: 0,
+      status: 'Planning',
+      detail: {
+        completion: 0,
+        earned: 0,
+        totalPriceValue: 100000,
+        totalEarnedValue: 0,
+        actualStartDate: '--',
+        actualEndDate: '--',
+        plannedStartDate: '01 Jan 2026',
+        plannedEndDate: '31 Dec 2026',
+        totalTasks: 20,
+        tasks: {
+          notStarted: { total: 20, delayed: 0 },
+          inProgress: { total: 0, delayed: 0 },
+          completed: { total: 0, delayed: 0 }
+        }
+      }
+    }
+  ]);
   const [projectData, setProjectData] = useState({
     projectName: '',
     description: '',
@@ -23,6 +100,13 @@ export default function DashboardScreen({ navigation }) {
     addressLine: '',
     state: ''
   });
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [currentDateType, setCurrentDateType] = useState('start'); // 'start' or 'end'
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showProjectDetail, setShowProjectDetail] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -47,10 +131,86 @@ export default function DashboardScreen({ navigation }) {
     }));
   };
 
+  const formatDate = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatDateForDisplay = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleString('default', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
+  };
+
+  const openDatePicker = (type) => {
+    setCurrentDateType(type);
+    if (type === 'start') {
+      setShowStartDatePicker(true);
+    } else {
+      setShowEndDatePicker(true);
+    }
+  };
+
+  const handleDateSelect = (selectedDate) => {
+    if (currentDateType === 'start') {
+      setStartDate(selectedDate);
+      setProjectData(prev => ({
+        ...prev,
+        startDate: formatDateForDisplay(selectedDate)
+      }));
+      setShowStartDatePicker(false);
+    } else {
+      setEndDate(selectedDate);
+      setProjectData(prev => ({
+        ...prev,
+        endDate: formatDateForDisplay(selectedDate)
+      }));
+      setShowEndDatePicker(false);
+    }
+  };
+
+  const generateDateOptions = () => {
+    const options = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 365; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      options.push({
+        value: date,
+        label: formatDateForDisplay(date)
+      });
+    }
+    return options;
+  };
+
+  const handleProjectClick = (project) => {
+    setSelectedProject(project);
+    setShowProjectDetail(true);
+  };
+
   const handleCreateProject = () => {
-    // Handle project creation logic here
-    console.log('Creating project:', projectData);
+    if (!projectData.projectName.trim()) {
+      Alert.alert('Error', 'Please enter a project name');
+      return;
+    }
+
+    const newProject = {
+      id: Date.now(),
+      name: projectData.projectName,
+      startDate: projectData.startDate || 'TBD',
+      endDate: projectData.endDate || 'TBD',
+      progress: 0,
+      status: 'Planning'
+    };
+
+    setProjects(prev => [newProject, ...prev]);
+    setTotalProjects(prev => prev + 1);
     setShowCreateModal(false);
+    
     // Reset form
     setProjectData({
       projectName: '',
@@ -60,6 +220,8 @@ export default function DashboardScreen({ navigation }) {
       addressLine: '',
       state: ''
     });
+
+    Alert.alert('Success', 'Project created successfully!');
   };
 
 
@@ -124,10 +286,63 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.filterButtonText}>Filter</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+            </View>
+          </View>
 
-      {/* Create Project Modal */}
+          {/* Project Cards Section */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.projectsList}
+            contentContainerStyle={styles.projectsListContent}
+          >
+            {projects.map((project) => (
+              <TouchableOpacity 
+                key={project.id} 
+                style={styles.projectCard}
+                onPress={() => handleProjectClick(project)}
+              >
+                {/* Project Header */}
+                <View style={styles.projectHeader}>
+                  <View style={styles.projectIcon}>
+                    <Ionicons name="business" size={24} color="white" />
+                  </View>
+                  <View style={styles.projectActions}>
+                    <TouchableOpacity style={styles.actionIcon}>
+                      <Ionicons name="call" size={16} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionIcon}>
+                      <Ionicons name="images" size={16} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Project Title and Progress */}
+                <View style={styles.titleProgressRow}>
+                  <Text style={styles.projectTitle} numberOfLines={2}>
+                    {project.name}
+                  </Text>
+                  <View style={styles.progressCircle}>
+                    <Text style={styles.progressText}>{project.progress}%</Text>
+                  </View>
+                </View>
+
+                {/* Project Dates */}
+                <View style={styles.projectDates}>
+                  <View style={styles.dateRow}>
+                    <Text style={styles.dateLabel}>START DATE</Text>
+                    <Text style={styles.dateValue}>{project.startDate}</Text>
+                  </View>
+                  <View style={styles.dateRow}>
+                    <Text style={styles.dateLabel}>END DATE</Text>
+                    <Text style={styles.dateValue}>{project.endDate}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Create Project Modal */}
       {showCreateModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -169,30 +384,34 @@ export default function DashboardScreen({ navigation }) {
                 <View style={styles.dateRow}>
                       <View style={styles.dateInputContainer}>
                         <Text style={styles.sectionLabel}>Start Date</Text>
-                        <View style={styles.dateInputWrapper}>
-                          <TextInput
-                            style={styles.dateInput}
-                            value={projectData.startDate}
-                            onChangeText={(value) => handleInputChange('startDate', value)}
-                            placeholder="DD/MM/YYYY"
-                            placeholderTextColor="#999"
-                          />
+                        <TouchableOpacity 
+                          style={styles.dateInputWrapper}
+                          onPress={() => openDatePicker('start')}
+                        >
+                          <Text style={[
+                            styles.dateInput,
+                            !projectData.startDate && styles.placeholderText
+                          ]}>
+                            {projectData.startDate || 'DD/MM/YYYY'}
+                          </Text>
                           <Ionicons name="calendar" size={20} color="#666" style={styles.calendarIcon} />
-                        </View>
+                        </TouchableOpacity>
                       </View>
 
                       <View style={styles.dateInputContainer}>
                         <Text style={styles.sectionLabel}>End Date</Text>
-                        <View style={styles.dateInputWrapper}>
-                          <TextInput
-                            style={styles.dateInput}
-                            value={projectData.endDate}
-                            onChangeText={(value) => handleInputChange('endDate', value)}
-                            placeholder="DD/MM/YYYY"
-                            placeholderTextColor="#999"
-                          />
+                        <TouchableOpacity 
+                          style={styles.dateInputWrapper}
+                          onPress={() => openDatePicker('end')}
+                        >
+                          <Text style={[
+                            styles.dateInput,
+                            !projectData.endDate && styles.placeholderText
+                          ]}>
+                            {projectData.endDate || 'DD/MM/YYYY'}
+                          </Text>
                           <Ionicons name="calendar" size={20} color="#666" style={styles.calendarIcon} />
-                        </View>
+                        </TouchableOpacity>
                       </View>
                 </View>
               </View>
@@ -252,11 +471,201 @@ export default function DashboardScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      )}
-    </ScrollView>
-  );
-}
+            </View>
+          )}
+
+          {/* Project Detail Modal */}
+          {showProjectDetail && selectedProject && (
+            <View style={styles.modalOverlay}>
+              <View style={styles.projectDetailModal}>
+                {/* Header */}
+                <View style={styles.projectDetailHeader}>
+                  <Text style={styles.projectDetailTitle}>Project Status</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowProjectDetail(false)}
+                    style={styles.projectDetailCloseButton}
+                  >
+                    <Ionicons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Content */}
+                <ScrollView style={styles.projectDetailContent}>
+                  {/* Progress Section */}
+                  <View style={styles.progressSection}>
+                    <View style={styles.progressRingContainer}>
+                      <View style={styles.progressRing}>
+                        <View style={styles.progressTextContainer}>
+                          <Text style={styles.progressPercentage}>{selectedProject.detail.completion}%</Text>
+                          <Text style={styles.progressLabel}>complete</Text>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.datesSection}>
+                      <View style={styles.dateColumn}>
+                        <Text style={styles.dateColumnTitle}>Actual</Text>
+                        <View style={styles.dateItem}>
+                          <View style={styles.dateItemHeader}>
+                            <Text style={styles.dateItemLabel}>Actual Start Date</Text>
+                            <Ionicons name="information-circle-outline" size={16} color="#999" />
+                          </View>
+                          <Text style={styles.dateItemValue}>{selectedProject.detail.actualStartDate}</Text>
+                        </View>
+                        <View style={styles.dateItem}>
+                          <View style={styles.dateItemHeader}>
+                            <Text style={styles.dateItemLabel}>Actual End Date</Text>
+                            <Ionicons name="information-circle-outline" size={16} color="#999" />
+                          </View>
+                          <Text style={styles.dateItemValue}>{selectedProject.detail.actualEndDate}</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.dateColumn}>
+                        <Text style={styles.dateColumnTitle}>Planned</Text>
+                        <View style={styles.dateItem}>
+                          <View style={styles.dateItemHeader}>
+                            <Text style={styles.dateItemLabel}>Start Date</Text>
+                            <Ionicons name="information-circle-outline" size={16} color="#999" />
+                          </View>
+                          <Text style={styles.dateItemValue}>{selectedProject.detail.plannedStartDate}</Text>
+                        </View>
+                        <View style={styles.dateItem}>
+                          <View style={styles.dateItemHeader}>
+                            <Text style={styles.dateItemLabel}>End Date</Text>
+                            <Ionicons name="information-circle-outline" size={16} color="#999" />
+                          </View>
+                          <Text style={styles.dateItemValue}>{selectedProject.detail.plannedEndDate}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Financial Section */}
+                  <View style={styles.financialSection}>
+                    <View style={styles.earnedSection}>
+                      <View style={styles.earnedProgressBar}>
+                        <View style={[styles.earnedProgressFill, { width: `${selectedProject.detail.earned}%` }]} />
+                      </View>
+                      <Text style={styles.earnedPercentage}>{selectedProject.detail.earned}%</Text>
+                      <Text style={styles.earnedLabel}>earned</Text>
+                    </View>
+                    
+                    <View style={styles.financialValues}>
+                      <View style={styles.financialItem}>
+                        <Text style={styles.financialLabel}>Total Price Value</Text>
+                        <Text style={styles.financialValue}>₹{selectedProject.detail.totalPriceValue.toLocaleString()}.00</Text>
+                      </View>
+                      <View style={styles.financialItem}>
+                        <Text style={styles.financialLabel}>Total Earned Value</Text>
+                        <Text style={styles.financialValue}>₹{selectedProject.detail.totalEarnedValue.toLocaleString()}.00</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Tasks Section */}
+                  <View style={styles.tasksSection}>
+                    <View style={styles.totalTasksSection}>
+                      <Text style={styles.totalTasksNumber}>{selectedProject.detail.totalTasks}</Text>
+                      <Text style={styles.totalTasksLabel}>Tasks</Text>
+                    </View>
+                    
+                    <View style={styles.taskBreakdown}>
+                      <View style={styles.taskColumn}>
+                        <View style={[styles.taskIndicator, { backgroundColor: '#999' }]} />
+                        <Text style={styles.taskColumnTitle}>Not Started</Text>
+                        <View style={styles.taskStats}>
+                          <View style={styles.taskStatItem}>
+                            <Text style={styles.taskStatLabel}>Total</Text>
+                            <Text style={styles.taskStatValue}>{selectedProject.detail.tasks.notStarted.total}</Text>
+                          </View>
+                          <View style={styles.taskStatItem}>
+                            <Text style={[styles.taskStatLabel, { color: '#e74c3c' }]}>Delayed</Text>
+                            <Text style={[styles.taskStatValue, { color: '#e74c3c' }]}>{selectedProject.detail.tasks.notStarted.delayed}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.taskColumn}>
+                        <View style={[styles.taskIndicator, { backgroundColor: '#f39c12' }]} />
+                        <Text style={styles.taskColumnTitle}>In Progress</Text>
+                        <View style={styles.taskStats}>
+                          <View style={styles.taskStatItem}>
+                            <Text style={styles.taskStatLabel}>Total</Text>
+                            <Text style={styles.taskStatValue}>{selectedProject.detail.tasks.inProgress.total}</Text>
+                          </View>
+                          <View style={styles.taskStatItem}>
+                            <Text style={[styles.taskStatLabel, { color: '#e74c3c' }]}>Delayed</Text>
+                            <Text style={[styles.taskStatValue, { color: '#e74c3c' }]}>{selectedProject.detail.tasks.inProgress.delayed}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.taskColumn}>
+                        <View style={[styles.taskIndicator, { backgroundColor: '#27ae60' }]} />
+                        <Text style={styles.taskColumnTitle}>Completed</Text>
+                        <View style={styles.taskStats}>
+                          <View style={styles.taskStatItem}>
+                            <Text style={styles.taskStatLabel}>Total</Text>
+                            <Text style={styles.taskStatValue}>{selectedProject.detail.tasks.completed.total}</Text>
+                          </View>
+                          <View style={styles.taskStatItem}>
+                            <Text style={[styles.taskStatLabel, { color: '#27ae60' }]}>Delayed</Text>
+                            <Text style={[styles.taskStatValue, { color: '#27ae60' }]}>{selectedProject.detail.tasks.completed.delayed}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* Custom Date Picker Modal */}
+          <Modal
+            visible={showStartDatePicker || showEndDatePicker}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => {
+              setShowStartDatePicker(false);
+              setShowEndDatePicker(false);
+            }}
+          >
+            <View style={styles.datePickerOverlay}>
+              <View style={styles.datePickerModal}>
+                <View style={styles.datePickerHeader}>
+                  <Text style={styles.datePickerTitle}>
+                    Select {currentDateType === 'start' ? 'Start' : 'End'} Date
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowStartDatePicker(false);
+                      setShowEndDatePicker(false);
+                    }}
+                    style={styles.datePickerCloseButton}
+                  >
+                    <Ionicons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView style={styles.datePickerList}>
+                  {generateDateOptions().map((option, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.dateOption}
+                      onPress={() => handleDateSelect(option.value)}
+                    >
+                      <Text style={styles.dateOptionText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        </ScrollView>
+      );
+    }
 
 const styles = StyleSheet.create({
   container: {
@@ -548,6 +957,9 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     minWidth: 0,
   },
+  placeholderText: {
+    color: '#999',
+  },
   calendarIcon: {
     marginLeft: 8,
   },
@@ -670,5 +1082,362 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Project Cards Styles
+  projectsList: {
+    marginTop: 20,
+    paddingHorizontal: 15,
+  },
+  projectsListContent: {
+    paddingRight: 15,
+  },
+  projectCard: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 16,
+    padding: 20,
+    marginRight: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    width: 280,
+    minHeight: 200,
+  },
+  projectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  projectIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  projectActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleProgressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
+  projectTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1976D2',
+    lineHeight: 22,
+    flex: 1,
+    marginRight: 10,
+  },
+  progressCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  projectDates: {
+    gap: 8,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    letterSpacing: 0.5,
+  },
+  dateValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1976D2',
+  },
+  // Date Picker Modal Styles
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '70%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  datePickerCloseButton: {
+    padding: 4,
+  },
+  datePickerList: {
+    maxHeight: 400,
+  },
+  dateOption: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dateOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  // Project Detail Modal Styles
+  projectDetailModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '100%',
+    height: '100%',
+    elevation: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  projectDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  projectDetailTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  projectDetailCloseButton: {
+    padding: 4,
+  },
+  projectDetailContent: {
+    padding: 20,
+  },
+  // Progress Section
+  progressSection: {
+    flexDirection: 'row',
+    marginBottom: 30,
+    alignItems: 'flex-start',
+  },
+  progressRingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 10,
+    borderColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  progressTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPercentage: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  datesSection: {
+    flex: 1,
+    flexDirection: 'row',
+    marginLeft: 20,
+    justifyContent: 'space-between',
+  },
+  dateColumn: {
+    flex: 1,
+    marginRight: 20,
+  },
+  dateColumnTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 15,
+  },
+  dateItem: {
+    marginBottom: 15,
+  },
+  dateItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  dateItemLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginRight: 5,
+  },
+  dateItemValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  // Financial Section
+  financialSection: {
+    flexDirection: 'row',
+    marginBottom: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'flex-start',
+  },
+  earnedSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  earnedProgressBar: {
+    width: 60,
+    height: 4,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 2,
+    marginBottom: 10,
+  },
+  earnedProgressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 2,
+  },
+  earnedPercentage: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  earnedLabel: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  financialValues: {
+    flex: 1,
+    marginLeft: 20,
+    flexDirection: 'column',
+  },
+  financialItem: {
+    marginBottom: 15,
+  },
+  financialLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 5,
+  },
+  financialValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  // Tasks Section
+  tasksSection: {
+    flexDirection: 'row',
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'flex-start',
+  },
+  totalTasksSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totalTasksNumber: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  totalTasksLabel: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  taskBreakdown: {
+    flex: 2,
+    flexDirection: 'row',
+    marginLeft: 20,
+    justifyContent: 'space-between',
+  },
+  taskColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  taskIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  taskColumnTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  taskStats: {
+    alignItems: 'center',
+  },
+  taskStatItem: {
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  taskStatLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 2,
+  },
+  taskStatValue: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#333',
   },
 });

@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // Import screens
 import DashboardScreen from './src/screens/DashboardScreen';
+import TasksScreen from './src/screens/TasksScreen';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -16,6 +17,7 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [activeScreen, setActiveScreen] = useState('Dashboard');
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [showTasksDropdown, setShowTasksDropdown] = useState(false);
 
   useEffect(() => {
     async function prepare() {
@@ -38,15 +40,22 @@ export default function App() {
     return null;
   }
 
-  const menuItems = [
-    { id: 'Dashboard', icon: 'home', label: 'Dashboard' },
-    { id: 'Projects', icon: 'folder', label: 'Projects' },
-    { id: 'Materials', icon: 'cube', label: 'Materials' },
-    { id: 'Labour', icon: 'people', label: 'Labour' },
-    { id: 'Issues', icon: 'warning', label: 'Issues' },
-    { id: 'Reports', icon: 'bar-chart', label: 'Reports' },
-    { id: 'PettyCash', icon: 'cash', label: 'Petty Cash' },
-  ];
+      const menuItems = [
+        { id: 'Dashboard', icon: 'home', label: 'Dashboard' },
+        { id: 'Projects', icon: 'folder', label: 'Projects' },
+        { id: 'Tasks', icon: 'list', label: 'Tasks', hasDropdown: true },
+        { id: 'Materials', icon: 'cube', label: 'Materials' },
+        { id: 'Labour', icon: 'people', label: 'Labour' },
+        { id: 'Issues', icon: 'warning', label: 'Issues' },
+        { id: 'Reports', icon: 'bar-chart', label: 'Reports' },
+        { id: 'PettyCash', icon: 'cash', label: 'Petty Cash' },
+      ];
+
+      const taskViews = [
+        { id: 'PlanView', icon: 'grid', label: 'Plan View' },
+        { id: 'ListView', icon: 'list', label: 'List View' },
+        { id: 'GanttView', icon: 'calendar', label: 'Gantt View' },
+      ];
 
   const renderContent = () => {
     switch (activeScreen) {
@@ -54,6 +63,12 @@ export default function App() {
         return <DashboardScreen navigation={{ navigate: () => {} }} />;
       case 'Projects':
         return <DashboardScreen navigation={{ navigate: () => {} }} />;
+      case 'PlanView':
+        return <TasksScreen navigation={{ navigate: () => {} }} />;
+      case 'ListView':
+        return <TasksScreen navigation={{ navigate: () => {} }} />;
+      case 'GanttView':
+        return <TasksScreen navigation={{ navigate: () => {} }} />;
       case 'Materials':
         return <DashboardScreen navigation={{ navigate: () => {} }} />;
       case 'Labour':
@@ -99,39 +114,82 @@ export default function App() {
           )}
         </View>
         
-        <View style={styles.menuItems}>
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.menuItem,
-                activeScreen === item.id && styles.activeMenuItem,
-                !sidebarVisible && styles.menuItemCollapsed
-              ]}
-              onPress={() => {
-                setActiveScreen(item.id);
-                // Close sidebar on mobile after selection
-                if (width < 768) {
-                  setSidebarVisible(false);
-                }
-              }}
-            >
-              <Ionicons
-                name={activeScreen === item.id ? item.icon : `${item.icon}-outline`}
-                size={24}
-                color={activeScreen === item.id ? 'white' : '#666'}
-              />
-              {sidebarVisible && (
-                <Text style={[
-                  styles.menuItemText,
-                  activeScreen === item.id && styles.activeMenuItemText
-                ]}>
-                  {item.label}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
+            <View style={styles.menuItems}>
+              {menuItems.map((item) => (
+                <View key={item.id} style={styles.menuItemContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.menuItem,
+                      activeScreen === item.id && styles.activeMenuItem,
+                      !sidebarVisible && styles.menuItemCollapsed
+                    ]}
+                    onPress={() => {
+                      if (item.hasDropdown) {
+                        setShowTasksDropdown(!showTasksDropdown);
+                      } else {
+                        setActiveScreen(item.id);
+                        setShowTasksDropdown(false);
+                        // Close sidebar on mobile after selection
+                        if (width < 768) {
+                          setSidebarVisible(false);
+                        }
+                      }
+                    }}
+                  >
+                    <Ionicons
+                      name={activeScreen === item.id ? item.icon : `${item.icon}-outline`}
+                      size={24}
+                      color={activeScreen === item.id ? 'white' : '#666'}
+                    />
+                    {sidebarVisible && (
+                      <Text style={[
+                        styles.menuItemText,
+                        activeScreen === item.id && styles.activeMenuItemText
+                      ]}>
+                        {item.label}
+                      </Text>
+                    )}
+                    {item.hasDropdown && sidebarVisible && (
+                      <Ionicons
+                        name={showTasksDropdown ? "chevron-up" : "chevron-down"}
+                        size={16}
+                        color="#666"
+                        style={styles.dropdownIcon}
+                      />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Tasks Dropdown */}
+                  {item.id === 'Tasks' && showTasksDropdown && sidebarVisible && (
+                    <View style={styles.dropdownMenu}>
+                      <Text style={styles.dropdownTitle}>TASKS</Text>
+                      {taskViews.map((taskView) => (
+                        <TouchableOpacity
+                          key={taskView.id}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setActiveScreen(taskView.id);
+                            setShowTasksDropdown(false);
+                            // Close sidebar on mobile after selection
+                            if (width < 768) {
+                              setSidebarVisible(false);
+                            }
+                          }}
+                        >
+                          <Ionicons
+                            name={taskView.icon}
+                            size={20}
+                            color="#666"
+                            style={styles.dropdownItemIcon}
+                          />
+                          <Text style={styles.dropdownItemText}>{taskView.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
         
         {!sidebarVisible && (
           <View style={styles.versionContainer}>
@@ -257,5 +315,51 @@ const styles = StyleSheet.create({
   versionText: {
     color: '#666',
     fontSize: 12,
+  },
+  // Dropdown Styles
+  menuItemContainer: {
+    position: 'relative',
+  },
+  dropdownIcon: {
+    marginLeft: 'auto',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    left: 280,
+    top: 0,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 8,
+    padding: 12,
+    minWidth: 200,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+  dropdownTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 4,
+  },
+  dropdownItemIcon: {
+    marginRight: 12,
+  },
+  dropdownItemText: {
+    color: '#ccc',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
